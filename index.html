@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Resist Slip Casting Simulator</title>
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+      background: linear-gradient(0deg, rgba(240, 240, 240, 1) 0%, rgba(150, 150, 150, 1) 100%);
+      font-size: 10px;
+      font-weight: 400;
+      font-family: sans-serif;
+      letter-spacing: 0.07em;
+    }
+
+    canvas {
+      display: block;
+    }
+
+    #controls {
+      position: fixed;
+      top: 1.5em;
+      left: 1.5em;
+      width: 22em;
+      max-height: 4.5em;
+      padding: 1.5em 2em;
+      background: rgba(255, 255, 255, 0.6);
+      user-select: none;
+      transition: all 250ms ease-in-out;
+      overflow-y: hidden;
+      border-radius: 1em;
+      backdrop-filter: blur(5px);
+    }
+
+    #controls.active {
+      max-height: 50em;
+    }
+
+    #controls-header {
+      position: relative;
+      width: 100%;
+      text-transform: uppercase;
+      font-weight: 600;
+      transition: all 50ms ease-in-out;
+      margin-bottom: 2em;
+      cursor: pointer;
+    }
+
+    #controls-header:hover::after {
+      position: absolute;
+      color: rgba(0, 0, 0, 0.5);
+      right: 0;
+      font-weight: 400;
+      content: "expand"
+    }
+
+    #controls.active #controls-header:hover::after {
+      position: absolute;
+      color: rgba(0, 0, 0, 0.2);
+      right: 0;
+      font-weight: 400;
+      content: "collapse"
+    }
+
+    .control-item {
+      position: relative;
+      margin: 1em 0;
+    }
+
+    .control-item span {
+      position: relative;
+      display: inline-block;
+    }
+
+    .control-item .label {
+      width: 60%;
+      user-select: none;
+    }
+
+    .control-item .option {
+      color: rgba(0, 0, 0, 0.25);
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .control-item .option.active,
+    .control-item .option.bang:hover {
+      color: rgba(0, 0, 0, 1);
+    }
+
+    #sim-on-btn.active {
+      color: rgba(0, 200, 0, 1.0);
+    }
+
+    #sim-off-btn.active {
+      color: rgba(220, 0, 0, 1.0);
+    }
+
+    .buffer-item {
+      height: 1em;
+    }
+
+    #image-control {
+      margin-bottom: 2em;
+      user-select: none;
+    }
+
+    #image-container {
+      width: 100%;
+      padding-top: 100%;
+      height: 0px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      cursor: pointer;
+      filter: grayscale(1.0);
+    }
+
+    #image-container img {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: fill;
+      border-radius: 0.5em;
+      user-select: none;
+    }
+
+    #image-overlay {
+      position: absolute;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.75);
+      opacity: 0;
+      pointer-events: none;
+      transition: all 150ms ease-in-out;
+      z-index: 1;
+      border-radius: 0.5em;
+      backdrop-filter: blur(5px);
+    }
+
+    #image-container:hover #image-overlay {
+      color: white;
+      opacity: 1;
+    }
+
+    .control-item input {
+      position: relative;
+      font-size: 1em;
+      width: 6em;
+      display: inline-block;
+      background: none;
+      border: none;
+      border-bottom: 1px solid black;
+    }
+
+    #modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      opacity: 0.0;
+      pointer-events: none;
+      user-select: none;
+      width: 16em;
+      height: 5em;
+      border-radius: 1em;
+      font-weight: 700;
+      transition: all 200ms ease-in-out;
+      background: rgba(0, 0, 0, 0.2);
+      margin: calc(50vh - 2.5em) calc(50vw - 8em);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      color: white;
+    }
+
+    #modal.active {
+      opacity: 1.0;
+    }
+
+    #copyright {
+      position: fixed;
+      bottom: 2em;
+      left: 2em;
+      color: #777 !important;
+    }
+
+    #copyright a {
+      color: #777 !important;
+    }
+  </style>
+</head>
+
+<body>
+  <script src="GPUComputationRenderer.js" type="module"></script>
+  <script src="Stats.js" type="module"></script>
+  <script src="script.js" type="module"></script>
+
+  <div id="controls" class="active">
+    <div id="controls-header">Controls</div>
+
+    <div class="control-item">
+      <span class="label">Simulation</span>
+      <span class="option" id="sim-on-btn">ON</span>
+      <span class="option active" id="sim-off-btn">OFF</span>
+    </div>
+
+    <div class="buffer-item">
+
+    </div>
+
+    <div id="controls-body">
+      <div class="control-item" id="image-control">
+        <div id="image-container" onclick="document.getElementById('file-input').click()">
+          <img id="uploaded-image" src="" alt="Click to upload" />
+          <div id="image-overlay">upload new mask</div>
+        </div>
+        <input type="file" id="file-input" accept="image/*" style="display: none" />
+      </div>
+
+      <div class="control-item">
+        <span class="label">Compute Shader</span>
+        <span class="option left" id="cs-show-btn">SHOW</span>
+        <span class="option right active" id="cs-hide-btn">HIDE</span>
+      </div>
+
+      <div class="control-item">
+        <span class="label">Reset Simulation</span>
+        <span class="option bang" id="reset-btn">RESET</span>
+      </div>
+
+      <div class="control-item">
+        <span class="label">Invert Mask</span>
+        <span class="option bang" id="invert-btn">INVERT</span>
+      </div>
+
+      <div class="buffer-item">
+
+      </div>
+
+      <div class="control-item">
+        <span class="label">Clay Color</span>
+        <input type="text" id="clay-color-input" value="DADAD0">
+      </div>
+
+      <div class="control-item">
+        <span class="label">Plaster Color</span>
+        <input type="text" id="plaster-color-input" value="E0E0E0">
+      </div>
+    </div>
+
+    <div class="control-item">
+      <span class="label">Material</span>
+      <span class="option active" id="material-toggle-btn">MATTE</span>
+    </div>
+
+    <div class="buffer-item">
+
+    </div>
+
+    <div class="control-item">
+      <span class="label">Export STL</span>
+      <span class="option bang" id="export-stl">EXPORT</span>
+    </div>
+  </div>
+
+  <div id="modal" class="">
+    Movement locked when simulation is running
+  </div>
+
+  <div id="copyright">Resist Slip Casting Simulator developed by the <a target="_blank" href="https://interactivematerials.info/work#resist-slip-casting">Interactive Materials Lab</a> 2026</div>
+</body>
+
+</html>
