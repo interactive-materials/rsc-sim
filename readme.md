@@ -6,9 +6,9 @@
 
 ## About
 
-This is a simulator for resist slip-casting. 
+This is a simulator for *resist slip-casting*. 
 
-Slip-casting is a craft process for making ceramic objects with a plaster mold and liquid clay ("slip"). The object is formed by clay that deposits on the walls of the the plaster mold as the mold absorbs water from slip over time. In resist slip-casting, water-resistant stickers are placed on specific regions on the mold to inhibit water absorbtion. This leads to uneven clay deposition which can be controlled to create different 2.5D textures.
+Slip-casting is a craft process for making ceramic objects with a plaster mold and liquid clay ("slip"). The object is formed by clay that deposits on the walls of the the plaster mold as the mold absorbs water from slip over time. In *resist slip-casting*, water-resistant stickers are placed on specific regions on the mold to inhibit water absorbtion. This leads to uneven clay deposition which can be controlled to create different 2.5D textures.
 
 Read more about resist slip-casting [here](https://interactivematerials.info/resist-slip-casting).
 
@@ -36,16 +36,21 @@ We made use of the THREE.js GPUComputationRenderer pipeline to perform the cellu
 
 ### Compute Shader algorithm
 
+*variables*
 ```
 uniform sampler2D u_gridState;
 uniform vec2 res;
 uniform int sx;
 uniform int sy;
 uniform int sz;
+```
 
+```
 void main() {
+```
 
-// Compute texture coordinates from fragment position
+*compute texture coordinates from fragment position*
+```
   vec2 uv = gl_FragCoord.xy / res;
   ivec2 texSize = ivec2(res);
   ivec2 pos = ivec2(gl_FragCoord.xy);
@@ -53,19 +58,26 @@ void main() {
   int pz = idx % sz;
   int py = (idx / sz) % sy;
   int px = idx / (sy * sz);
+```
 
+*check if texel index is out of bounds*
+```
   if (idx >= sx * sy * sz) { // texel index is out of bounds
 
     gl_FragColor = vec4(0.0, 0.0, 0.0, 0.0);
 
   } else {
+```
 
-    // fetch water concentration through blue channel
+*fetch water concentration through blue channel and clay concentration through red channel*
+```
     float water = texelFetch(u_gridState, ivec2(idx % texSize.x, idx / texSize.x), 0).b;
 
-    // fetch clay concentration through red channel
     float clay = texelFetch(u_gridState, ivec2(idx % texSize.x, idx / texSize.x), 0).r;
+```
 
+*initialize variables for calculation*
+```
     float waterGradient = 0.0;
     float clayAccumulation = 0.0;
 
@@ -79,10 +91,13 @@ void main() {
     float diffusion = ${diffusion};
     float diffusionGravity = ${diffusionGravity};
     float averaging = ${averaging};
+```
 
+*check six adjacent neighbors around each voxel.*
+*calculate diffusion gradients and clay accumulation*
+```
     if (pz < sz - 1 && pz > 0) {
 
-      // Neighbor offsets for diffusion simulation
       ivec3 neighbors[6] =
           ivec3[](ivec3(-1, 0, 0), ivec3(1, 0, 0), ivec3(0, -1, 0),
                   ivec3(0, 1, 0), ivec3(0, 0, 1), ivec3(0, 0, -1)
@@ -120,8 +135,11 @@ void main() {
           }
         }
       }
+```
 
-      // Neighbor offsets for slumping simulation
+*check eight neighbors in the layers diagonally below and above each voxel.*
+*calculate slumping*
+```
       ivec3 neighbors2[8] =
           ivec3[](ivec3(-1, -1, -1), ivec3(0, -1, -1), ivec3(1, -1, -1),
                   ivec3(-1, 0, -1), ivec3(1, 0, -1),
@@ -171,17 +189,20 @@ void main() {
           }
         }
       }
+```
 
-
+*update clay and water values*
+```
       clay += clayAccumulation;
       water += waterGradient;
 
       clay = clamp(clay, 0.0, 1.0);
       water = clamp(water, 0.0, 1.0);
     }
+```
 
-    // store total height of clay deposited per column in green channel
-
+*store clay accumulation per column in the green channel*
+```
     float totalHeight = 0.0;
 
     if (idx < sx * sy) {
